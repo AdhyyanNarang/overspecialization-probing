@@ -1,0 +1,22 @@
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+utils/__pycache__/
+
+# Generated experiment artifacts
+cache/
+cache_3n/
+data/
+dataset/
+results/
+final_figs/
+
+# Generated files
+movieLens_probing_results_multi_seed_p.pkl
+msgd_convergence.png
+msgd_cumulative_diff.png
+model_performance_seed*.png
+best_model_comparison_seed*.png
+census_*.png
+amazon_*.png
+

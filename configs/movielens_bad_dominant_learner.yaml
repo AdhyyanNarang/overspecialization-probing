@@ -1,0 +1,36 @@
+dataset: movielens
+config:
+  data_source_file: ./dataset/MovieLens10M_200_5.pkl
+  n: 5
+  T: 4000
+  eta: 5.0
+  num_sample: 50
+  reg_lambda: 0.001
+  init_seed: 3
+  test_size: 0.1
+  init_seeds:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+  p_values:
+    - 0
+  fixed_probing_set:
+    - 2
+  tau: 0.3
+  rankings_only: false
+  majority_percentage: 0.8
+  clustering_mode: single_majority
+  N_probe: 1000
+  probe_num_samples: 100
+  jump: 500
+  init_method: random
+  output_file: movieLens_probing_results_multi_seed_p.pkl
+  save_mode: slim

@@ -1,0 +1,30 @@
+dataset: census
+config:
+  eta: 0.01
+  init_seed: 6
+  n: 5
+  T: 4000
+  tau: 0.3
+  reg_lambda: 1.0e-09
+  num_sample: 150
+  N_probe: 100
+  probe_num_samples: 150
+  probing_set:
+    - 2
+  p_values:
+    - 0
+  kappa_values:
+    - 0.0
+  init_method: random
+  plot_seeds_separately: false
+  plot_distance_separately: false
+  clustering_method: kmeans
+  clustering_mode: half_majority
+  feature_name: AGEP
+  feature_index: 0
+  feature_binning: threshold
+  lr_schedule: constant
+  force_recompute_bar_theta: false
+  max_plot_iterations: 4000
+runner:
+  num_seeds: 15
