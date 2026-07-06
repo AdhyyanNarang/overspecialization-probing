@@ -31,28 +31,7 @@ import sys
 sys.path.append(str(SCRIPT_DIR))
 sys.path.append(str(SCRIPT_DIR / "utils"))
 
-from census_final_plots import (  # noqa: E402
-    CensusConfig,
-    load_and_preprocess_data,
-    perform_clustering as census_perform_clustering,
-    run_msgd_experiments as run_census_msgd,
-)
-from amazon_final_plots import (  # noqa: E402
-    AmazonConfig,
-    add_intercept_feature,
-    load_and_preprocess_amazon_data,
-    perform_clustering as amazon_perform_clustering,
-    run_msgd_experiments as run_amazon_msgd,
-)
-from movielens_final_plots import (  # noqa: E402
-    MovieLensConfig,
-    initialize_theta_from_erm,
-    load_movielens_data,
-    perform_clustering as movielens_perform_clustering,
-    run_msgd_experiments as run_movielens_msgd,
-)
 from utils_clustering import create_rankings_from_clusters  # noqa: E402
-from utils_msgd_census import initialize_theta_gd  # noqa: E402
 
 
 def main() -> None:
@@ -119,6 +98,8 @@ def _run_dataset(
 ) -> Dict[str, Any]:
     if dataset == "census":
         return _run_census(config, runner)
+    if dataset == "census_nn":
+        return _run_census_nn(config, runner, checkpoint_path=checkpoint_path)
     if dataset == "amazon":
         return _run_amazon(config, runner, checkpoint_path=checkpoint_path)
     if dataset == "movielens":
@@ -147,7 +128,14 @@ def _select_or_create_output_dir(results_root: Path, dataset: str, config_stem: 
     return config_root / timestamp
 
 
-def _run_census(config: CensusConfig, runner: Dict[str, Any]) -> Dict[str, Any]:
+def _run_census(config: Any, runner: Dict[str, Any]) -> Dict[str, Any]:
+    from census_final_plots import (  # noqa: E402
+        load_and_preprocess_data,
+        perform_clustering as census_perform_clustering,
+        run_msgd_experiments as run_census_msgd,
+    )
+    from utils_msgd_census import initialize_theta_gd  # noqa: E402
+
     X_train, X_test, y_train, y_test, X_original_train, _ = load_and_preprocess_data()
     cluster_labels, kmeans = census_perform_clustering(X_train, X_original_train, config)
     rankings = create_rankings_from_clusters(
@@ -184,11 +172,122 @@ def _run_census(config: CensusConfig, runner: Dict[str, Any]) -> Dict[str, Any]:
     return results_dict
 
 
-def _run_amazon(
-    config: AmazonConfig,
+def _run_census_nn(
+    config: Any,
     runner: Dict[str, Any],
     checkpoint_path: Path | None = None,
 ) -> Dict[str, Any]:
+    from census_final_plots import (  # noqa: E402
+        load_and_preprocess_data,
+        perform_clustering as census_perform_clustering,
+        train_baseline_lr,
+    )
+    from census_nn_final_plots import (  # noqa: E402
+        maybe_subsample_census_data,
+        run_msgd_experiments as run_census_nn_msgd,
+        train_baseline_mlp,
+    )
+    from utils_msgd_census_nn import pretrain_partition_models  # noqa: E402
+
+    X_train, X_test, y_train, y_test, X_original_train, X_original_test = load_and_preprocess_data()
+    (
+        X_train,
+        X_test,
+        y_train,
+        y_test,
+        X_original_train,
+        X_original_test,
+    ) = maybe_subsample_census_data(
+        X_train,
+        X_test,
+        y_train,
+        y_test,
+        X_original_train,
+        X_original_test,
+        config,
+    )
+
+    full_lr_test_acc = train_baseline_lr(X_train, y_train, X_test, y_test, config.reg_lambda)
+    full_mlp_test_acc = None
+    if config.run_pooled_mlp_baseline:
+        full_mlp_test_acc = train_baseline_mlp(X_train, y_train, X_test, y_test, config)
+
+    cluster_labels, kmeans = census_perform_clustering(X_train, X_original_train, config)
+    rankings = create_rankings_from_clusters(
+        X_train,
+        kmeans.cluster_centers_,
+        config.n,
+        cluster_labels,
+    )
+
+    init_models = None
+    if config.init_method == "partition_pretrain":
+        init_models = pretrain_partition_models(X_train, y_train, rankings, config)
+
+    num_seeds = int(runner.get("num_seeds", 3))
+
+    initial_results = None
+    if checkpoint_path is not None and checkpoint_path.exists():
+        try:
+            with open(checkpoint_path, "rb") as f:
+                checkpoint_payload = pickle.load(f)
+            if isinstance(checkpoint_payload, dict) and "results" in checkpoint_payload:
+                initial_results = checkpoint_payload["results"]
+            print(
+                f"Resuming Census NN from checkpoint {checkpoint_path} "
+                f"({0 if initial_results is None else len(initial_results)} runs loaded)"
+            )
+        except Exception as exc:
+            print(f"Warning: failed to load checkpoint {checkpoint_path}: {exc}")
+            initial_results = None
+
+    def checkpoint_fn(results_dict: Dict[str, Any], meta: Dict[str, Any]) -> None:
+        if checkpoint_path is None:
+            return
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "dataset": "census_nn",
+            "results": results_dict,
+            "meta": meta,
+        }
+        with tempfile.NamedTemporaryFile(
+            mode="wb", dir=str(checkpoint_path.parent), delete=False
+        ) as tmpf:
+            pickle.dump(payload, tmpf, protocol=pickle.HIGHEST_PROTOCOL)
+            tmp_name = tmpf.name
+        os.replace(tmp_name, checkpoint_path)
+
+    results_dict = run_census_nn_msgd(
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+        rankings,
+        init_models,
+        config,
+        num_seeds=num_seeds,
+        initial_results=initial_results,
+        checkpoint_every=1,
+        checkpoint_fn=checkpoint_fn,
+        baseline_mlp_acc=full_mlp_test_acc,
+        baseline_lr_acc=full_lr_test_acc,
+    )
+    return results_dict
+
+
+def _run_amazon(
+    config: Any,
+    runner: Dict[str, Any],
+    checkpoint_path: Path | None = None,
+) -> Dict[str, Any]:
+    from amazon_final_plots import (  # noqa: E402
+        add_intercept_feature,
+        load_and_preprocess_amazon_data,
+        perform_clustering as amazon_perform_clustering,
+        run_msgd_experiments as run_amazon_msgd,
+    )
+    from utils_msgd_census import initialize_theta_gd  # noqa: E402
+
     (
         X_train,
         X_test,
@@ -282,7 +381,14 @@ def _run_amazon(
     return results_dict
 
 
-def _run_movielens(config: MovieLensConfig) -> Dict[str, Any]:
+def _run_movielens(config: Any) -> Dict[str, Any]:
+    from movielens_final_plots import (  # noqa: E402
+        initialize_theta_from_erm,
+        load_movielens_data,
+        perform_clustering as movielens_perform_clustering,
+        run_msgd_experiments as run_movielens_msgd,
+    )
+
     data = load_movielens_data(config)
     X_train = data["X_train"]
     y_train = data["y_train"]
@@ -312,10 +418,20 @@ def _run_movielens(config: MovieLensConfig) -> Dict[str, Any]:
 
 def _get_config_class(dataset: str):
     if dataset == "census":
+        from census_final_plots import CensusConfig  # noqa: E402
+
         return CensusConfig
+    if dataset == "census_nn":
+        from census_nn_final_plots import CensusNNConfig  # noqa: E402
+
+        return CensusNNConfig
     if dataset == "amazon":
+        from amazon_final_plots import AmazonConfig  # noqa: E402
+
         return AmazonConfig
     if dataset == "movielens":
+        from movielens_final_plots import MovieLensConfig  # noqa: E402
+
         return MovieLensConfig
     raise ValueError(f"Unknown dataset '{dataset}'.")
 

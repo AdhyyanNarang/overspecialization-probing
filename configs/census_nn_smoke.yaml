@@ -1,0 +1,29 @@
+dataset: census_nn
+config:
+  eta: 0.01
+  n: 5
+  T: 50
+  tau: 0.7
+  reg_lambda: 1.0e-09
+  num_sample: 64
+  N_probe: 32
+  probe_num_samples: 32
+  probing_set:
+    - 2
+  p_values:
+    - 0
+  kappa_values:
+    - 0.0
+  init_method: partition_pretrain
+  clustering_method: kmeans
+  clustering_mode: no_majority
+  lr_schedule: constant
+  hidden_dim: 32
+  device: cpu
+  pretrain_epochs: 1
+  baseline_epochs: 1
+  eval_every: 10
+  max_train_users: 4096
+  max_test_users: 512
+runner:
+  num_seeds: 1

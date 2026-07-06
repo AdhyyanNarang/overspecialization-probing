@@ -1,0 +1,27 @@
+dataset: census_nn
+config:
+  eta: 0.01
+  n: 5
+  T: 1000
+  tau: 0.3
+  reg_lambda: 1.0e-09
+  num_sample: 150
+  N_probe: 100
+  probe_num_samples: 150
+  probing_set:
+    - 2
+  p_values:
+    - 0
+  kappa_values:
+    - 0.0
+  init_method: random
+  clustering_method: kmeans
+  clustering_mode: no_majority
+  lr_schedule: constant
+  hidden_dim: 64
+  device: cpu
+  eval_every: 100
+  run_pooled_mlp_baseline: true
+  force_recompute_bar_models: false
+runner:
+  num_seeds: 3

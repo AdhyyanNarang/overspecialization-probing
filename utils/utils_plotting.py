@@ -15,7 +15,17 @@ from datetime import datetime
 from pathlib import Path
 
 
-def plot_individual_model_accuracies(results_dict, args, title=None, only_p0=False, show_title=True, show_legend=True, save_file_name=None, baseline_acc=None):
+def plot_individual_model_accuracies(
+    results_dict,
+    args,
+    title=None,
+    only_p0=False,
+    show_title=True,
+    show_legend=True,
+    save_file_name=None,
+    baseline_acc=None,
+    y_lim=None,
+):
     """
     Plots individual model accuracies aggregated across seeds (mean ± stderr).
     
@@ -36,6 +46,7 @@ def plot_individual_model_accuracies(results_dict, args, title=None, only_p0=Fal
         show_legend (bool): If False, do not display the legend.
         save_file_name (str): Base name for the saved file (without extension). If None, defaults to 'bad_outcome'.
         baseline_acc (float or None): If provided, draws a horizontal reference line at this accuracy.
+        y_lim (tuple or None): Optional (lower, upper) y-axis limits. Defaults to (0.4, 0.85).
     """
     plt.style.use('seaborn-v0_8-whitegrid')
     mpl.rcParams.update({
@@ -71,6 +82,7 @@ def plot_individual_model_accuracies(results_dict, args, title=None, only_p0=Fal
         return
 
     n_models = results_dict[list(results_dict.keys())[0]]["n"]
+    y_lim = y_lim or (0.4, 0.85)
 
     # Use a sophisticated color palette with better contrast and aesthetics
     # Based on ColorBrewer qualitative schemes and designed for clarity
@@ -146,7 +158,7 @@ def plot_individual_model_accuracies(results_dict, args, title=None, only_p0=Fal
                 ax.spines['left'].set_linewidth(1.5)
                 ax.spines['bottom'].set_linewidth(1.5)
                 
-                ax.set_ylim(0.4, 0.85)
+                ax.set_ylim(*y_lim)
                 # Set x-axis ticks every 500
                 ax.set_xticks(np.arange(0, max(ep)+1, 500))
 
@@ -262,7 +274,7 @@ def plot_individual_model_accuracies(results_dict, args, title=None, only_p0=Fal
                     ax.spines['left'].set_linewidth(1.5)
                     ax.spines['bottom'].set_linewidth(1.5)
                     
-                    ax.set_ylim(0.4, 0.85)
+                    ax.set_ylim(*y_lim)
                     ax.set_xticks(np.arange(0, max(ep)+1, 1000))
                     
                     # Add titles for top row
@@ -356,7 +368,7 @@ def plot_individual_model_accuracies(results_dict, args, title=None, only_p0=Fal
                 ax.spines['bottom'].set_linewidth(1.5)
                 
                 ax.set_xlabel("Iteration", fontweight='semibold')
-                ax.set_ylim(0.4, 0.85)
+                ax.set_ylim(*y_lim)
                 # Set x-axis ticks every 500
                 ax.set_xticks(np.arange(0, max(ep)+1, 500))
                 # Bring p value to subplot titles unless titles are excluded

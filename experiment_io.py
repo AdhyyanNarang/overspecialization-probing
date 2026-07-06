@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import fields
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Tuple, Type, get_origin
+from typing import Any, Dict, Iterable, Optional, Tuple, Type, get_origin, get_type_hints
 
 import yaml
 
@@ -38,7 +38,10 @@ def expand_sweeps(config: Dict[str, Any], config_cls: Type) -> List[Tuple[Dict[s
 
     Returns a list of (resolved_config, sweep_values) pairs.
     """
-    field_types = {f.name: f.type for f in fields(config_cls)}
+    try:
+        field_types = get_type_hints(config_cls)
+    except Exception:
+        field_types = {f.name: f.type for f in fields(config_cls)}
     sweep_keys = []
     base_config = {}
 
@@ -123,6 +126,8 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
 def _is_list_type(field_type: Any) -> bool:
     if field_type is list:
         return True
+    if isinstance(field_type, str):
+        return field_type == "list" or field_type.startswith("list[")
     origin = get_origin(field_type)
     return origin is list
 
