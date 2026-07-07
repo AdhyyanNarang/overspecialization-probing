@@ -1,3 +1,10 @@
+# Dynamics of Learning under User Choice
+
+Code artifact for the paper
+["Dynamics of Learning under User Choice: Overspecialization and Peer-Model Probing"](https://arxiv.org/pdf/2602.23565).
+
+Public repository: <https://github.com/AdhyyanNarang/overspecialization-probing>
+
 ## Steps to replicate experiments in paper
 
 1. Create and activate the environment:
